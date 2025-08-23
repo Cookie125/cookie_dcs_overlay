@@ -1,0 +1,273 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            color: #ffffff;
+            background: transparent;
+            margin: 0;
+            padding: 10px;
+        }
+        table {
+            border-collapse: collapse;
+            width: auto; /* Allow natural sizing */
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 8px;
+            position: relative;
+        }
+        th, td {
+            border: 1px solid #ffffff;
+            padding: 1px; /* Minimal padding for compression */
+            text-align: left; /* Default for headers */
+            font-size: 12px; /* Compact font size */
+            position: relative;
+            white-space: nowrap; /* Prevent text wrapping */
+        }
+        th {
+            background: rgba(0, 0, 255, 0.8); /* Blue coalition header */
+        }
+        tr:nth-child(even) {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        th:nth-child(1), td:nth-child(1) { /* Player */
+            min-width: 50px; /* Fits "Player" and allows for longer names */
+        }
+        th:nth-child(2), td:nth-child(2) { /* Fuel (%) */
+            min-width: 60px; /* Fits "Fuel (%)" */
+            max-width: 60px; /* Limit to title width */
+        }
+        th:nth-child(3), td:nth-child(3) { /* Speed */
+            min-width: 50px; /* Fits "Speed" */
+            max-width: 50px; /* Limit to title and 3-digit content */
+        }
+        th:nth-child(4), td:nth-child(4) { /* Gun */
+            min-width: 30px; /* Fits "Gun" */
+            max-width: 30px; /* Limit to title and 3-digit content */
+        }
+        th:nth-child(5), td:nth-child(5) { /* Actives */
+            min-width: 50px; /* Fits "Actives" */
+            max-width: 50px; /* Limit to title and 2-digit content */
+        }
+        th:nth-child(6), td:nth-child(6) { /* SARH */
+            min-width: 40px; /* Fits "SARH" */
+            max-width: 40px; /* Limit to title and 2-digit content */
+        }
+        th:nth-child(7), td:nth-child(7) { /* IR */
+            min-width: 20px; /* Fits "IR" */
+            max-width: 20px; /* Limit to title and 2-digit content */
+        }
+        /* Center numeric data in columns 2-7 */
+        td:nth-child(2), td:nth-child(3), td:nth-child(4), td:nth-child(5), td:nth-child(6), td:nth-child(7) {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <table id="blueTable">
+        <tr>
+            <th>Player</th>
+            <th>Fuel (%)</th>
+            <th>Speed</th>
+            <th>Gun</th>
+            <th>Actives</th>
+            <th>SARH</th>
+            <th>IR</th>
+        </tr>
+    </table>
+    <script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+            return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+            if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+                try {
+                    var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                    var firstSheetName = workbook.SheetNames[0];
+                    var worksheet = workbook.Sheets[firstSheetName];
+
+                    // Convert sheet to JSON to filter blank rows
+                    var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                    // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                    var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                    // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                    var headerRowIndex = filteredData.findIndex((row, index) =>
+                        row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                    );
+                    // Fallback
+                    if (headerRowIndex === -1 || headerRowIndex > 25) {
+                        headerRowIndex = 0;
+                    }
+
+                    // Convert filtered JSON back to CSV
+                    var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                    csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                    return csv;
+                } catch (e) {
+                    console.error(e);
+                    return "";
+                }
+            }
+            return gk_fileData[filename] || "";
+        }
+    </script>
+    <script>
+        // Function to clear rows of dead players
+        function clearDeadRows(tableId, playerData) {
+            const table = document.getElementById(tableId);
+            const rows = table.getElementsByTagName('tr');
+            for (let i = rows.length - 1; i > 0; i--) { // Start from the last row to avoid index issues
+                const playerCell = rows[i].cells[0]; // First cell contains player name
+                const playerName = playerCell.textContent;
+                if (playerData[playerName] && playerData[playerName].status === 'Dead') {
+                    table.deleteRow(i);
+                    console.log(`Removed dead row for ${playerName}`);
+                }
+            }
+        }
+
+        // Function to clear rows of players not in the CSV
+        function clearAbsentPlayers(tableId, playerData) {
+            const table = document.getElementById(tableId);
+            const rows = table.getElementsByTagName('tr');
+            const currentPlayers = new Set(Object.keys(playerData));
+            for (let i = rows.length - 1; i > 0; i--) { // Start from the last row to avoid index issues
+                const playerCell = rows[i].cells[0]; // First cell contains player name
+                const playerName = playerCell.textContent;
+                if (!currentPlayers.has(playerName)) {
+                    table.deleteRow(i);
+                    console.log(`Removed absent row for ${playerName}`);
+                }
+            }
+        }
+
+        function fetchCSV() {
+            fetch('http://104.63.195.57:5314/server-fueldata.csv', {
+                headers: {
+                    'Authorization': 'Basic ' + btoa('admin:K7$mP9!xL2qJ4')
+                }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('HTTP error: ' + response.status);
+                return response.text();
+            })
+            .then(data => {
+                console.log('Fetched data:', data); // Debug log
+                const lines = data.trim().split('\n');
+                const table = document.getElementById('blueTable');
+                const playerData = {};
+                // Collect all player data first
+                lines.slice(1).forEach(line => {
+                    try {
+                        const [time, player, aircraft, fuel, posX, posY, posZ, velX, velY, velZ, speed, gunAmmo, missileTypes, coalition, status] = line.split(',');
+                        console.log(`Processing: ${player}, Status: ${status}, Time: ${time}`); // Enhanced debug log
+                        if (coalition === 'Blue' && (!playerData[player] || time > playerData[player].time)) {
+                            playerData[player] = { player, time, fuel, speed, gunAmmo, missileTypes, coalition, status };
+                        }
+                    } catch (e) {
+                        console.error('Error parsing line:', line, e);
+                    }
+                });
+                console.log('Parsed playerData:', playerData); // Debug log
+                // Clear rows of dead players and absent players
+                clearDeadRows('blueTable', playerData);
+                clearAbsentPlayers('blueTable', playerData);
+                // Update or add only the latest data for each player
+                for (const player in playerData) {
+                    if (playerData[player].status === 'Alive') {
+                        let rowExists = false;
+                        const rows = table.getElementsByTagName('tr');
+                        for (let i = 1; i < rows.length; i++) { // Start from 1 to skip header
+                            if (rows[i].cells[0].textContent === playerData[player].player) {
+                                rowExists = true;
+                                const speedKnots = Math.round(parseFloat(playerData[player].speed) * 1.94384);
+                                rows[i].cells[1].textContent = playerData[player].fuel;
+                                rows[i].cells[2].textContent = speedKnots;
+                                rows[i].cells[3].textContent = playerData[player].gunAmmo;
+                                const missiles = playerData[player].missileTypes.split(';').reduce((acc, pair) => {
+                                    const [type, count] = pair.split(':');
+                                    if (type && count) acc[type] = parseInt(count) || 0;
+                                    return acc;
+                                }, { Active: 0, 'Semi-Active': 0, IR: 0 });
+                                rows[i].cells[4].textContent = missiles.Active > 0 ? missiles.Active : '0';
+                                rows[i].cells[5].textContent = missiles['Semi-Active'] > 0 ? missiles['Semi-Active'] : '0';
+                                rows[i].cells[6].textContent = missiles.IR > 0 ? missiles.IR : '0';
+                                break;
+                            }
+                        }
+                        if (!rowExists) {
+                            const speedKnots = Math.round(parseFloat(playerData[player].speed) * 1.94384);
+                            const row = table.insertRow();
+                            row.insertCell().textContent = playerData[player].player;
+                            row.insertCell().textContent = playerData[player].fuel;
+                            row.insertCell().textContent = speedKnots;
+                            row.insertCell().textContent = playerData[player].gunAmmo;
+                            const missiles = playerData[player].missileTypes.split(';').reduce((acc, pair) => {
+                                const [type, count] = pair.split(':');
+                                if (type && count) acc[type] = parseInt(count) || 0;
+                                return acc;
+                            }, { Active: 0, 'Semi-Active': 0, IR: 0 });
+                            row.insertCell().textContent = missiles.Active > 0 ? missiles.Active : '0';
+                            row.insertCell().textContent = missiles['Semi-Active'] > 0 ? missiles['Semi-Active'] : '0';
+                            row.insertCell().textContent = missiles.IR > 0 ? missiles.IR : '0';
+                        }
+                    }
+                }
+            })
+            .catch(err => {
+                console.error('Error reading CSV:', err);
+                const table = document.getElementById('blueTable');
+                while (table.rows.length > 1) table.deleteRow(1);
+                const row = table.insertRow();
+                row.insertCell().textContent = 'Error loading data';
+                row.insertCell().colSpan = 6;
+            });
+        }
+        setInterval(fetchCSV, 1000);
+        fetchCSV(); // Initial call
+    </script>
+</body>
+</html>
