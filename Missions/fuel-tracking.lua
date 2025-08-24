@@ -2,33 +2,15 @@
 -- Tracks fuel percentage, position, velocity, gun ammo, missile types (Active, Semi-Active, IR), coalition, and death status of all active aircraft and logs to CSV
 
 -- Configuration
-local fuelInterval = 5          -- seconds between fuel checks
-local notificationInterval = 2  -- seconds between notifications
+local fuelInterval = 1 -- seconds between fuel checks
+local notificationInterval = 2 -- seconds between notifications
+local enableNotifications = false -- set to false to disable in-game notifications
 local notificationCounter = 0
 local logFilePath = lfs.writedir() .. [[Logs\server-fueldata.csv]]
-local telemetryTimeout = 30     -- seconds to consider a player dead if no telemetry
-local lockFilePath = logFilePath .. ".lock"  -- Lock file to prevent concurrent access
+local telemetryTimeout = 30 -- seconds to consider a player dead if no telemetry
 
 -- Persistent table to track seen players across intervals
 local seenPlayers = {}
-
--- Function to acquire a file lock
-local function acquireLock()
-    local lockFile = io.open(lockFilePath, "w")
-    if not lockFile then
-        env.error("Failed to create lock file: " .. lockFilePath)
-        return false
-    end
-    lockFile:write(os.time())
-    lockFile:flush()
-    lockFile:close()
-    return true
-end
-
--- Function to release a file lock
-local function releaseLock()
-    os.remove(lockFilePath)
-end
 
 -- Function to get aircraft units
 local function getAirUnits()
@@ -80,9 +62,9 @@ end
 -- Helper function to get missile counts by type (Active, Semi-Active, IR)
 local function getMissileTypes(unit)
     local ammo = unit:getAmmo() or {}
-    local active = 0  -- Active radar (guidance 3)
-    local semiActive = 0  -- Semi-active radar (guidance 1 or 4)
-    local ir = 0  -- Infrared (guidance 2)
+    local active = 0 -- Active radar (guidance 3)
+    local semiActive = 0 -- Semi-active radar (guidance 1 or 4)
+    local ir = 0 -- Infrared (guidance 2)
     for _, item in ipairs(ammo) do
         local desc = item.desc
         if desc and desc.category == 1 then -- All missiles
@@ -129,7 +111,6 @@ local function checkFuel()
     local notificationString = "Current Fuel, Ammo, and Missile Status:\n"
     local humanFound = false
     local seenPlayersThisRun = {}
-
     for _, unit in ipairs(unitArray) do
         local fuel = unit:getFuel() or 0
         local playername = unit:getPlayerName()
@@ -142,7 +123,6 @@ local function checkFuel()
         local velX, velY, velZ, speed = getVelocityComponents(velocity)
         local coalition = getCoalition(unit)
         local status = "Alive"
-
         if playername then
             seenPlayersThisRun[playername] = true
             -- Reset status to Alive if player reappears, and update telemetry
@@ -162,91 +142,72 @@ local function checkFuel()
                 status = status,
                 lastSeen = timer.getTime() -- Update last seen time
             }
-            -- Acquire lock before writing
-            if acquireLock() then
-                local file = io.open(logFilePath, "a")
-                if file then
-                    local logline = string.format("%s,%s,%s,%s,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%s,%s,%s,%s",
-                        currentTime, playername, unittype, seenPlayers[playername].fuelPercent, posX, posY, posZ, velX, velY, velZ, speed, gunAmmo, missileStr, coalition, status)
-                    file:write(logline .. "\n")
-                    file:flush() -- Ensure data is written
-                    file:close()
-                else
-                    env.error("Failed to open log file: " .. logFilePath)
-                end
-                releaseLock()
+            -- Log to CSV file
+            local file = io.open(logFilePath, "a")
+            if file then
+                local logline = string.format("%s,%s,%s,%s,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%s,%s,%s,%s",
+                    currentTime, playername, unittype, seenPlayers[playername].fuelPercent, posX, posY, posZ, velX, velY, velZ, speed, gunAmmo, missileStr, coalition, status)
+                file:write(logline .. "\n")
+                file:flush() -- Ensure data is written
+                file:close()
             else
-                env.warning("Failed to acquire lock, skipping write for " .. playername)
+                env.error("Failed to open log file: " .. logFilePath)
             end
-
             humanFound = true
             notificationString = notificationString ..
-                string.format("%s (%s): %s%% fuel, %s rounds, Missiles: %s, Coalition: %s, Status: %s\n", 
+                string.format("%s (%s): %s%% fuel, %s rounds, Missiles: %s, Coalition: %s, Status: %s\n",
                     playername, unittype, seenPlayers[playername].fuelPercent, gunAmmo, missileStr, coalition, status)
         end
     end
-
-    -- Check for players who disappeared or timed out with lock
-    if acquireLock() then
-        for playername, data in pairs(seenPlayers) do
-            local currentTimeSeconds = timer.getTime()
-            if not seenPlayersThisRun[playername] and data.status ~= "Dead" then
-                -- Mark as Dead if player is no longer in a slot
-                local file = io.open(logFilePath, "a")
-                if file then
-                    local logline = string.format("%s,%s,%s,%s,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%s,%s,%s,Dead",
-                        currentTime, playername, data.unittype, data.fuelPercent, data.posX, data.posY, data.posZ, data.velX, data.velY, data.velZ, data.speed, data.gunAmmo, data.missileStr, data.coalition)
-                    file:write(logline .. "\n")
-                    file:flush()
-                    file:close()
-                    data.status = "Dead"
-                    env.info("Player " .. playername .. " marked Dead due to deslot")
-                end
-            elseif data.status == "Alive" and (currentTimeSeconds - (data.lastSeen or 0)) >= telemetryTimeout then
-                -- Mark as Dead if no telemetry for 30 seconds
-                local file = io.open(logFilePath, "a")
-                if file then
-                    local logline = string.format("%s,%s,%s,%s,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%s,%s,%s,Dead",
-                        currentTime, playername, data.unittype, data.fuelPercent, data.posX, data.posY, data.posZ, data.velX, data.velY, data.velZ, data.speed, data.gunAmmo, data.missileStr, data.coalition)
-                    file:write(logline .. "\n")
-                    file:flush()
-                    file:close()
-                    data.status = "Dead"
-                    env.info("Player " .. playername .. " marked Dead due to telemetry timeout")
-                end
+    -- Check for players who disappeared or timed out
+    for playername, data in pairs(seenPlayers) do
+        local currentTimeSeconds = timer.getTime()
+        if not seenPlayersThisRun[playername] and data.status ~= "Dead" then
+            -- Mark as Dead if player is no longer in a slot
+            local file = io.open(logFilePath, "a")
+            if file then
+                local logline = string.format("%s,%s,%s,%s,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%s,%s,%s,Dead",
+                    currentTime, playername, data.unittype, data.fuelPercent, data.posX, data.posY, data.posZ, data.velX, data.velY, data.velZ, data.speed, data.gunAmmo, data.missileStr, data.coalition)
+                file:write(logline .. "\n")
+                file:flush()
+                file:close()
+                data.status = "Dead"
+                env.info("Player " .. playername .. " marked Dead due to deslot")
+            end
+        elseif data.status == "Alive" and (currentTimeSeconds - (data.lastSeen or 0)) >= telemetryTimeout then
+            -- Mark as Dead if no telemetry for 30 seconds
+            local file = io.open(logFilePath, "a")
+            if file then
+                local logline = string.format("%s,%s,%s,%s,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%s,%s,%s,Dead",
+                    currentTime, playername, data.unittype, data.fuelPercent, data.posX, data.posY, data.posZ, data.velX, data.velY, data.velZ, data.speed, data.gunAmmo, data.missileStr, data.coalition)
+                file:write(logline .. "\n")
+                file:flush()
+                file:close()
+                data.status = "Dead"
+                env.info("Player " .. playername .. " marked Dead due to telemetry timeout")
             end
         end
-        releaseLock()
-    else
-        env.warning("Failed to acquire lock for dead player check")
     end
-
-    -- Show notification if interval reached and humans present
-    if notificationCounter >= notificationInterval then
+    -- Show notification if interval reached, humans present, and notifications enabled
+    if enableNotifications and notificationCounter >= notificationInterval then
         notificationCounter = 0
         if humanFound then
             trigger.action.outText(notificationString, 30, true)
         end
     end
-
     -- Schedule next check
     timer.scheduleFunction(checkFuel, {}, timer.getTime() + fuelInterval)
 end
 
--- Initialize CSV file with lock
+-- Initialize CSV file with headers
 local function initializeCSV()
-    if acquireLock() then
-        local file = io.open(logFilePath, "w")
-        if file then
-            file:write("Time,Player,Aircraft,Fuel_Percent,Pos_X,Pos_Y,Pos_Z,Vel_X,Vel_Y,Vel_Z,Speed,Gun_Ammo,Missile_Types,Coalition,Status\n")
-            file:close()
-            env.info("CSV file initialized with headers at: " .. logFilePath)
-        else
-            env.error("Failed to initialize CSV file at: " .. logFilePath)
-        end
-        releaseLock()
+    local file = io.open(logFilePath, "w")
+    if file then
+        file:write("Time,Player,Aircraft,Fuel_Percent,Pos_X,Pos_Y,Pos_Z,Vel_X,Vel_Y,Vel_Z,Speed,Gun_Ammo,Missile_Types,Coalition,Status\n")
+        file:close()
+        env.info("CSV file initialized with headers at: " .. logFilePath)
     else
-        env.error("Failed to acquire lock for CSV initialization")
+        env.error("Failed to initialize CSV file at: " .. logFilePath)
     end
 end
 
