@@ -11,7 +11,7 @@ Latest Version of Python must be installed
 Sanatize DCS:
 Navigate to your DCS root directory than to Scripts/MissionScripting.lua
 Open MissionScripting.lua and comment out each santize module to look as such:
-  --sanitizeModule('os')
+  	--sanitizeModule('os')
 	--sanitizeModule('io')
 	--sanitizeModule('lfs')
 Once this is done save the file. Note this is overwritten when DCS is updated and must be re done in order for the Lua to function
