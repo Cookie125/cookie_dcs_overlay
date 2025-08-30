@@ -1,4 +1,5 @@
 This is a simple tool for logging player data and streaming it from a webserver to be used on a stream as an overlay with the added function of being able to output player telemetry to charts afterwards for added readability or for the purpose of reviewing tracks.
+The LUA script is based off a fuel script created by @fidaperkasa on discord better know as [.ID]EagleEye his script helped make this possible
 Note: This is my first time ever attempting such a project these scripts were made with the help of generative AI the solutions presented might not be ideal however since there was no open source offering I spent the time making and debugging it for you more code savvy people please be gentle im open to suggestions.
 **I have also never wrote a read me so... yeah I will try my best
 
