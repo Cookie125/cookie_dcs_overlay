@@ -2,7 +2,7 @@
 -- Tracks fuel percentage, position, velocity, gun ammo, missile types (Active, Semi-Active, IR), coalition, and death status of all active aircraft and logs to CSV
 
 -- Configuration
-local fuelInterval = 1 -- seconds between fuel checks
+local fuelInterval = 5 -- seconds between fuel checks
 local notificationInterval = 2 -- seconds between notifications
 local enableNotifications = false -- set to false to disable in-game notifications
 local notificationCounter = 0

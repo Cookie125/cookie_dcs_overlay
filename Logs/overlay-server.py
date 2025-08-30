@@ -15,9 +15,9 @@ LOCK_FILE = CSV_FILE + ".lock"  # Lock file path
 USERNAME = "admin"  # Change to your desired username
 PASSWORD = "K7$mP9!xL2qJ4"  # Change to a strong password
 LOG_FILE = "server.log"  # Log file for debugging
-ALLOWED_IPS = {'192.168.50.1'}  # Add client PC public IP here
-MAX_ATTEMPTS = 5
-MAX_RETRIES = 5  # Maximum retry attempts for lock
+ALLOWED_IPS = {'111.111.11.1'}  # Add client PC public IP here
+MAX_ATTEMPTS = 3
+MAX_RETRIES = 3  # Maximum retry attempts for lock
 RETRY_DELAY = 1  # Seconds to wait between retries
 
 # Set up logging
